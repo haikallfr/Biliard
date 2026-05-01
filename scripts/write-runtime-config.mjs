@@ -19,8 +19,15 @@ for (const file of [".env", ".env.local"]) {
   }
 }
 
+function getSupabaseUrl() {
+  const projectRef = (process.env.VITE_SUPABASE_PROJECT_REF || "").trim();
+  if (projectRef) return `https://${projectRef}.supabase.co`;
+
+  return (process.env.VITE_SUPABASE_URL || "").trim();
+}
+
 const config = {
-  supabaseUrl: process.env.VITE_SUPABASE_URL || "",
+  supabaseUrl: getSupabaseUrl(),
   supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY || "",
 };
 
