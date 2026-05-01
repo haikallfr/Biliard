@@ -1,6 +1,7 @@
 import { CircleDot, Copy, Link2, RotateCcw, Users } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import GameCanvas from "./components/GameCanvas";
+import { INITIAL_RULES } from "./game/constants";
 import { makeRoomCode, createRealtimeRoom } from "./multiplayer/realtime";
 
 const playerId = crypto.randomUUID();
@@ -12,13 +13,12 @@ export default function App() {
   const [onlineCount, setOnlineCount] = useState(1);
   const [remoteShot, setRemoteShot] = useState(null);
   const [remoteSnapshot, setRemoteSnapshot] = useState(null);
-  const [turn, setTurn] = useState(0);
-  const [groups, setGroups] = useState({ 0: null, 1: null });
+  const [rules, setRules] = useState(INITIAL_RULES);
   const [pocketed, setPocketed] = useState([]);
   const [message, setMessage] = useState("Tarik bola putih untuk mengatur arah dan tenaga.");
   const roomRef = useRef(null);
 
-  const currentPlayer = turn % 2;
+  const currentPlayer = rules.currentPlayer;
   const myPlayer = 0;
   const isMyTurn = currentPlayer === myPlayer;
   const canPlay = transport === "local" || onlineCount < 2 || isMyTurn;
@@ -30,11 +30,14 @@ export default function App() {
       onPresence: setOnlineCount,
       onShot: (payload) => {
         setRemoteShot({ ...payload.shot, nonce: crypto.randomUUID() });
-        setTurn((value) => value + 1);
         setMessage("Lawan baru saja menembak. Tunggu bola berhenti.");
       },
       onSnapshot: (payload) => {
         setRemoteSnapshot({ ...payload.snapshot, nonce: crypto.randomUUID() });
+        if (payload.snapshot?.rules) {
+          setRules(payload.snapshot.rules);
+          setMessage(statusFromRules(payload.snapshot.rules, myPlayer));
+        }
       },
     });
 
@@ -45,10 +48,10 @@ export default function App() {
     const playerPocketed = pocketed.filter((ball) => ball.owner === 0);
     const opponentPocketed = pocketed.filter((ball) => ball.owner === 1);
     return [
-      { label: "Kamu", group: groups[0] ?? "open", count: playerPocketed.length },
-      { label: "Lawan", group: groups[1] ?? "open", count: opponentPocketed.length },
+      { label: "Kamu", group: rules.groups[0] ?? "open", count: playerPocketed.length },
+      { label: "Lawan", group: rules.groups[1] ?? "open", count: opponentPocketed.length },
     ];
-  }, [groups, pocketed]);
+  }, [rules.groups, pocketed]);
 
   function joinRoom(event) {
     event.preventDefault();
@@ -67,36 +70,35 @@ export default function App() {
   function handlePocket(ball) {
     if (!ball) return;
     if (ball.type === "cue") {
-      setMessage("Foul: bola putih masuk. Bola dikembalikan ke baulk.");
-      setTurn((value) => value + 1);
+      setMessage("Scratch: bola putih masuk. Tunggu sampai semua bola berhenti.");
       return;
     }
 
     if (ball.type === "eight") {
-      setMessage(`${currentPlayer === myPlayer ? "Kamu" : "Lawan"} memasukkan bola 8. Rack selesai.`);
+      setMessage(`${currentPlayer === myPlayer ? "Kamu" : "Lawan"} memasukkan bola 8.`);
       setPocketed((items) => [...items, { ...ball, owner: currentPlayer }]);
       return;
     }
 
     setPocketed((items) => [...items, { ...ball, owner: currentPlayer }]);
-    setGroups((prev) => {
-      if (prev[0] || prev[1]) return prev;
-      const other = currentPlayer === 0 ? 1 : 0;
-      const otherGroup = ball.type === "solid" ? "stripe" : "solid";
-      return { ...prev, [currentPlayer]: ball.type, [other]: otherGroup };
-    });
-    setMessage(`${ball.type === "solid" ? "Solid" : "Stripe"} masuk. Pemain tetap pegang meja.`);
+    setMessage(`${ball.type === "solid" ? "Solid" : "Stripe"} masuk.`);
   }
 
   function handleShot(event) {
     if (event.type === "shot") {
       roomRef.current?.sendShot({ shot: event.shot });
-      setTurn((value) => value + 1);
-      setMessage("Shot terkirim. Fisika disinkronkan ke room.");
+      setMessage("Shot terkirim. Fisika sedang berjalan sinkron.");
+    }
+
+    if (event.type === "result") {
+      setRules(event.rules);
+      setMessage(statusFromRules(event.rules, myPlayer));
+      roomRef.current?.sendSnapshot({ snapshot: event.snapshot });
     }
 
     if (event.type === "snapshot") {
       roomRef.current?.sendSnapshot({ snapshot: event.snapshot });
+      if (event.snapshot?.rules) setRules(event.snapshot.rules);
     }
   }
 
@@ -104,8 +106,7 @@ export default function App() {
     const next = makeRoomCode();
     setRoomCode(next);
     setPocketed([]);
-    setGroups({ 0: null, 1: null });
-    setTurn(0);
+    setRules(INITIAL_RULES);
     setMessage(`Room baru ${next} siap dimainkan.`);
   }
 
@@ -153,7 +154,7 @@ export default function App() {
             <p className="eyeline">Giliran</p>
             <div className={`turn-card ${canPlay ? "active" : ""}`}>
               <span>Pemain {currentPlayer + 1}</span>
-              <strong>{canPlay ? "Kamu" : "Lawan"}</strong>
+              <strong>{currentPlayer === myPlayer ? "Kamu" : "Lawan"}</strong>
             </div>
           </div>
 
@@ -179,7 +180,7 @@ export default function App() {
           remoteShot={remoteShot}
           remoteSnapshot={remoteSnapshot}
           active={canPlay}
-          turnToken={turn}
+          turnToken={rules.shotNumber}
         />
 
         <aside className="side-panel compact">
@@ -205,4 +206,34 @@ export default function App() {
       </section>
     </main>
   );
+}
+
+function statusFromRules(rules, myPlayer) {
+  if (rules.winner !== null && rules.winner !== undefined) {
+    return rules.winner === myPlayer ? "Kamu menang. Bola 8 masuk legal." : "Lawan menang. Rack selesai.";
+  }
+
+  if (rules.foul) {
+    return `Foul: ${foulText(rules.foul)}. Giliran Pemain ${rules.currentPlayer + 1}.`;
+  }
+
+  if (rules.lastShot?.pocketed?.length) {
+    const names = rules.lastShot.pocketed.map((ball) => (ball.number ? ball.number : "cue")).join(", ");
+    return `Bola masuk: ${names}. Giliran Pemain ${rules.currentPlayer + 1}.`;
+  }
+
+  return `Giliran Pemain ${rules.currentPlayer + 1}.`;
+}
+
+function foulText(foul) {
+  const labels = {
+    scratch: "scratch",
+    noContact: "tidak kena bola",
+    wrongFirstBall: "bola pertama salah",
+    noRailAfterContact: "tidak ada rail setelah kontak",
+    illegalBreak: "break tidak sah",
+    eightFirstOnOpenTable: "bola 8 tidak boleh disentuh dulu",
+  };
+
+  return labels[foul] ?? foul;
 }

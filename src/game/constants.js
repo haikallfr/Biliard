@@ -2,16 +2,43 @@ export const TABLE = {
   width: 1200,
   height: 620,
   rail: 58,
-  pocketRadius: 35,
+  pocketRadius: 24,
   ballRadius: 16,
+};
+
+export const GAME_PHASES = {
+  BREAK: "break",
+  OPEN: "open",
+  ASSIGNED: "assigned",
+  ENDED: "ended",
+};
+
+export const FOULS = {
+  SCRATCH: "scratch",
+  NO_CONTACT: "noContact",
+  WRONG_FIRST_BALL: "wrongFirstBall",
+  NO_RAIL_AFTER_CONTACT: "noRailAfterContact",
+  ILLEGAL_BREAK: "illegalBreak",
+  EIGHT_FIRST_OPEN: "eightFirstOnOpenTable",
+};
+
+export const INITIAL_RULES = {
+  phase: GAME_PHASES.BREAK,
+  currentPlayer: 0,
+  groups: { 0: null, 1: null },
+  ballInHand: false,
+  foul: null,
+  winner: null,
+  lastShot: null,
+  shotNumber: 0,
 };
 
 export const POCKETS = [
   { x: TABLE.rail, y: TABLE.rail },
-  { x: TABLE.width / 2, y: TABLE.rail - 5 },
+  { x: TABLE.width / 2, y: TABLE.rail },
   { x: TABLE.width - TABLE.rail, y: TABLE.rail },
   { x: TABLE.rail, y: TABLE.height - TABLE.rail },
-  { x: TABLE.width / 2, y: TABLE.height - TABLE.rail + 5 },
+  { x: TABLE.width / 2, y: TABLE.height - TABLE.rail },
   { x: TABLE.width - TABLE.rail, y: TABLE.height - TABLE.rail },
 ];
 

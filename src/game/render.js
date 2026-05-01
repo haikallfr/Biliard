@@ -12,12 +12,17 @@ export function drawTable(ctx, game, state, resources) {
 
   const cue = game.cueBall();
   if (state.aim && cue && !cue.plugin.pocketed) {
-    drawAim(ctx, cue, state.aim);
+    drawAim(ctx, game, cue, state.aim);
   }
 
-  game.getBalls().forEach((ball) => {
-    if (!ball.plugin.pocketed) drawBall(ctx, ball, ballRadius);
-  });
+  game.getBalls()
+    .filter((ball) => !ball.plugin.pocketed)
+    .sort((a, b) => a.position.y - b.position.y)
+    .forEach((ball) => drawBallShadow(ctx, ball, ballRadius));
+
+  game.getBalls()
+    .filter((ball) => !ball.plugin.pocketed)
+    .forEach((ball) => drawBall(ctx, ball, ballRadius));
 
   ctx.save();
   ctx.fillStyle = "rgba(247, 240, 211, 0.42)";
@@ -27,46 +32,117 @@ export function drawTable(ctx, game, state, resources) {
 }
 
 function drawOuterFrame(ctx, width, height) {
-  const frame = ctx.createLinearGradient(0, 0, width, height);
-  frame.addColorStop(0, "#4a2d18");
-  frame.addColorStop(0.44, "#15100d");
-  frame.addColorStop(1, "#714621");
-  roundRect(ctx, 8, 8, width - 16, height - 16, 42);
+  const frame = ctx.createLinearGradient(0, 0, 0, height);
+  frame.addColorStop(0, "#b46e31");
+  frame.addColorStop(0.18, "#5d341b");
+  frame.addColorStop(0.52, "#24120c");
+  frame.addColorStop(0.82, "#7b431f");
+  frame.addColorStop(1, "#e0a05a");
+
+  roundRect(ctx, 12, 12, width - 24, height - 24, 28);
   ctx.fillStyle = frame;
   ctx.fill();
 
-  ctx.strokeStyle = "rgba(245, 216, 151, 0.26)";
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(255, 219, 137, 0.58)";
+  ctx.lineWidth = 2;
   ctx.stroke();
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(34, 16, 9, 0.7)";
+  ctx.lineWidth = 10;
+  roundRect(ctx, 24, 24, width - 48, height - 48, 24);
+  ctx.stroke();
+  ctx.restore();
+
+  drawRailInlays(ctx);
 }
 
 function drawFelt(ctx, resources) {
   const { width, height, rail } = TABLE;
-  roundRect(ctx, rail, rail, width - rail * 2, height - rail * 2, 22);
+
+  roundRect(ctx, rail, rail, width - rail * 2, height - rail * 2, 10);
+  ctx.save();
+  ctx.clip();
+
   if (resources.feltPattern) {
     ctx.fillStyle = resources.feltPattern;
+    ctx.fillRect(rail, rail, width - rail * 2, height - rail * 2);
   } else {
     const felt = ctx.createLinearGradient(rail, rail, width - rail, height - rail);
-    felt.addColorStop(0, "#166b4e");
-    felt.addColorStop(1, "#0b3f35");
+    felt.addColorStop(0, "#0cc55c");
+    felt.addColorStop(0.48, "#08a94d");
+    felt.addColorStop(1, "#057d3f");
     ctx.fillStyle = felt;
+    ctx.fillRect(rail, rail, width - rail * 2, height - rail * 2);
   }
-  ctx.fill();
 
-  ctx.fillStyle = "rgba(7, 18, 15, 0.14)";
+  const glow = ctx.createRadialGradient(width * 0.48, height * 0.48, 60, width * 0.48, height * 0.48, width * 0.52);
+  glow.addColorStop(0, "rgba(68, 255, 142, 0.3)");
+  glow.addColorStop(0.58, "rgba(8, 128, 61, 0.08)");
+  glow.addColorStop(1, "rgba(3, 37, 23, 0.32)");
+  ctx.fillStyle = glow;
   ctx.fillRect(rail, rail, width - rail * 2, height - rail * 2);
+
+  ctx.restore();
 }
 
 function drawRails(ctx) {
   const { width, height, rail } = TABLE;
+  const cushion = 24;
+  const feltLeft = rail;
+  const feltRight = width - rail;
+  const feltTop = rail;
+  const feltBottom = height - rail;
+
   ctx.save();
-  ctx.strokeStyle = "rgba(238, 210, 142, 0.2)";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(rail + 13, rail + 13, width - (rail + 13) * 2, height - (rail + 13) * 2);
-  ctx.strokeStyle = "rgba(11, 8, 6, 0.55)";
-  ctx.lineWidth = 10;
-  roundRect(ctx, rail - 10, rail - 10, width - rail * 2 + 20, height - rail * 2 + 20, 30);
+
+  drawCushion(ctx, [
+    { x: feltLeft + 42, y: feltTop - cushion },
+    { x: width / 2 - 44, y: feltTop - cushion },
+    { x: width / 2 - 62, y: feltTop },
+    { x: feltLeft + 26, y: feltTop },
+  ]);
+  drawCushion(ctx, [
+    { x: width / 2 + 44, y: feltTop - cushion },
+    { x: feltRight - 42, y: feltTop - cushion },
+    { x: feltRight - 26, y: feltTop },
+    { x: width / 2 + 62, y: feltTop },
+  ]);
+  drawCushion(ctx, [
+    { x: feltLeft + 42, y: feltBottom + cushion },
+    { x: width / 2 - 44, y: feltBottom + cushion },
+    { x: width / 2 - 62, y: feltBottom },
+    { x: feltLeft + 26, y: feltBottom },
+  ]);
+  drawCushion(ctx, [
+    { x: width / 2 + 44, y: feltBottom + cushion },
+    { x: feltRight - 42, y: feltBottom + cushion },
+    { x: feltRight - 26, y: feltBottom },
+    { x: width / 2 + 62, y: feltBottom },
+  ]);
+  drawCushion(ctx, [
+    { x: feltLeft - cushion, y: feltTop + 42 },
+    { x: feltLeft, y: feltTop + 26 },
+    { x: feltLeft, y: feltBottom - 26 },
+    { x: feltLeft - cushion, y: feltBottom - 42 },
+  ]);
+  drawCushion(ctx, [
+    { x: feltRight + cushion, y: feltTop + 42 },
+    { x: feltRight, y: feltTop + 26 },
+    { x: feltRight, y: feltBottom - 26 },
+    { x: feltRight + cushion, y: feltBottom - 42 },
+  ]);
+
+  ctx.strokeStyle = "rgba(255, 218, 121, 0.32)";
+  ctx.lineWidth = 2;
+  roundRect(ctx, rail - 28, rail - 28, width - rail * 2 + 56, height - rail * 2 + 56, 18);
   ctx.stroke();
+
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+  ctx.lineWidth = 4;
+  roundRect(ctx, rail - 4, rail - 4, width - rail * 2 + 8, height - rail * 2 + 8, 12);
+  ctx.stroke();
+
   ctx.restore();
 }
 
@@ -92,66 +168,250 @@ function drawGuides(ctx) {
 
 function drawPockets(ctx) {
   POCKETS.forEach((pocket) => {
-    const gradient = ctx.createRadialGradient(pocket.x, pocket.y, 2, pocket.x, pocket.y, TABLE.pocketRadius);
-    gradient.addColorStop(0, "#020302");
-    gradient.addColorStop(1, "#11100e");
+    const rimRadius = TABLE.pocketRadius + 5;
+    const rim = ctx.createRadialGradient(pocket.x - 5, pocket.y - 5, 2, pocket.x, pocket.y, rimRadius);
+    rim.addColorStop(0, "#d68a47");
+    rim.addColorStop(0.42, "#5a2c13");
+    rim.addColorStop(1, "#160907");
+    ctx.fillStyle = rim;
+    ctx.beginPath();
+    ctx.arc(pocket.x, pocket.y, rimRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    const gradient = ctx.createRadialGradient(
+      pocket.x - 5,
+      pocket.y - 7,
+      1,
+      pocket.x,
+      pocket.y,
+      TABLE.pocketRadius,
+    );
+    gradient.addColorStop(0, "#25211b");
+    gradient.addColorStop(0.35, "#050504");
+    gradient.addColorStop(1, "#000000");
     ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.arc(pocket.x, pocket.y, TABLE.pocketRadius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "rgba(245, 216, 151, 0.22)";
-    ctx.lineWidth = 2;
+
+    ctx.strokeStyle = "rgba(255, 226, 151, 0.36)";
+    ctx.lineWidth = 1.5;
     ctx.stroke();
   });
 }
 
-function drawAim(ctx, cue, aim) {
-  const dx = aim.x - cue.position.x;
-  const dy = aim.y - cue.position.y;
-  const angle = Math.atan2(dy, dx);
-  const pull = Math.min(Math.hypot(dx, dy), 190);
-  const power = pull / 190;
-  const targetAngle = angle + Math.PI;
-  const endX = cue.position.x + Math.cos(targetAngle) * 620;
-  const endY = cue.position.y + Math.sin(targetAngle) * 620;
+function drawRailInlays(ctx) {
+  const { width, height, rail } = TABLE;
+  const topY = rail - 34;
+  const bottomY = height - rail + 34;
+  const leftX = rail - 34;
+  const rightX = width - rail + 34;
 
   ctx.save();
-  ctx.strokeStyle = `rgba(251, 231, 165, ${0.35 + power * 0.42})`;
-  ctx.lineWidth = 3;
-  ctx.setLineDash([18, 14]);
-  ctx.beginPath();
-  ctx.moveTo(cue.position.x, cue.position.y);
-  ctx.lineTo(endX, endY);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(255, 218, 126, 0.5)";
+  ctx.fillStyle = "rgba(26, 12, 8, 0.54)";
+
+  for (let x = rail + 96; x < width - rail - 60; x += 112) {
+    drawInlay(ctx, x, topY, 58, 17, false);
+    drawInlay(ctx, x, bottomY, 58, 17, false);
+  }
+
+  for (let y = rail + 70; y < height - rail - 38; y += 92) {
+    drawInlay(ctx, leftX, y, 17, 52, true);
+    drawInlay(ctx, rightX, y, 17, 52, true);
+  }
+
+  ctx.restore();
+}
+
+function drawInlay(ctx, x, y, width, height, vertical) {
+  ctx.save();
+  ctx.translate(x, y);
+  if (vertical) ctx.rotate(Math.PI / 2);
+
+  roundRect(ctx, -width / 2, -height / 2, width, height, 8);
+  ctx.fill();
   ctx.stroke();
 
-  const cueBack = 70 + power * 130;
+  ctx.fillStyle = "#d79a48";
+  ctx.beginPath();
+  ctx.arc(-width * 0.24, 0, 5, 0, Math.PI * 2);
+  ctx.arc(width * 0.24, 0, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255, 245, 186, 0.74)";
+  ctx.beginPath();
+  ctx.moveTo(-width * 0.08, -height * 0.24);
+  ctx.lineTo(width * 0.08, height * 0.24);
+  ctx.moveTo(width * 0.08, -height * 0.24);
+  ctx.lineTo(-width * 0.08, height * 0.24);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawCushion(ctx, points) {
+  const gradient = ctx.createLinearGradient(points[0].x, points[0].y, points[2].x, points[2].y);
+  gradient.addColorStop(0, "#20d56a");
+  gradient.addColorStop(0.45, "#0aa447");
+  gradient.addColorStop(1, "#045b2e");
+
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  points.forEach((point, index) => {
+    if (index === 0) ctx.moveTo(point.x, point.y);
+    else ctx.lineTo(point.x, point.y);
+  });
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(179, 255, 182, 0.32)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function drawAim(ctx, game, cue, aim) {
+  const point = aim.point ?? aim;
+  const dx = point.x - cue.position.x;
+  const dy = point.y - cue.position.y;
+  const shotAngle = Number.isFinite(aim.angle) ? aim.angle : Math.atan2(dy, dx) + Math.PI;
+  const stickAngle = shotAngle + Math.PI;
+  const power = aim.power ?? 0;
+  const spin = aim.spin ?? { x: 0, y: 0 };
+  const prediction = game.predictShot?.({ angle: shotAngle, power, spin });
+
+  ctx.save();
+  if (prediction) {
+    drawPrediction(ctx, prediction, power);
+  }
+
+  const cueBack = 70 + power * 145;
   ctx.setLineDash([]);
   ctx.lineCap = "round";
-  ctx.strokeStyle = "#b9874f";
-  ctx.lineWidth = 9;
+  ctx.shadowColor = "rgba(0, 0, 0, 0.46)";
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetX = Math.cos(stickAngle + Math.PI / 2) * 7;
+  ctx.shadowOffsetY = Math.sin(stickAngle + Math.PI / 2) * 7;
+  ctx.strokeStyle = "#5c3317";
+  ctx.lineWidth = 11;
   ctx.beginPath();
   ctx.moveTo(
-    cue.position.x + Math.cos(angle) * 28,
-    cue.position.y + Math.sin(angle) * 28,
+    cue.position.x + Math.cos(stickAngle) * 28,
+    cue.position.y + Math.sin(stickAngle) * 28,
   );
   ctx.lineTo(
-    cue.position.x + Math.cos(angle) * cueBack,
-    cue.position.y + Math.sin(angle) * cueBack,
+    cue.position.x + Math.cos(stickAngle) * cueBack,
+    cue.position.y + Math.sin(stickAngle) * cueBack,
   );
   ctx.stroke();
 
-  ctx.strokeStyle = "#ead9a2";
-  ctx.lineWidth = 3;
+  const wood = ctx.createLinearGradient(
+    cue.position.x + Math.cos(stickAngle) * 24,
+    cue.position.y + Math.sin(stickAngle) * 24,
+    cue.position.x + Math.cos(stickAngle) * cueBack,
+    cue.position.y + Math.sin(stickAngle) * cueBack,
+  );
+  wood.addColorStop(0, "#ead9a2");
+  wood.addColorStop(0.16, "#f9edc9");
+  wood.addColorStop(0.22, "#8a5730");
+  wood.addColorStop(1, "#c18a4e");
+
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = wood;
+  ctx.lineWidth = 7;
   ctx.beginPath();
   ctx.moveTo(
-    cue.position.x + Math.cos(angle) * 24,
-    cue.position.y + Math.sin(angle) * 24,
+    cue.position.x + Math.cos(stickAngle) * 28,
+    cue.position.y + Math.sin(stickAngle) * 28,
   );
   ctx.lineTo(
-    cue.position.x + Math.cos(angle) * 44,
-    cue.position.y + Math.sin(angle) * 44,
+    cue.position.x + Math.cos(stickAngle) * cueBack,
+    cue.position.y + Math.sin(stickAngle) * cueBack,
   );
   ctx.stroke();
+
+  ctx.strokeStyle = "#eef0dc";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(
+    cue.position.x + Math.cos(stickAngle) * 24,
+    cue.position.y + Math.sin(stickAngle) * 24,
+  );
+  ctx.lineTo(
+    cue.position.x + Math.cos(stickAngle) * 44,
+    cue.position.y + Math.sin(stickAngle) * 44,
+  );
+  ctx.stroke();
+
+  drawSpinBadge(ctx, cue, spin);
+  ctx.restore();
+}
+
+function drawPrediction(ctx, prediction, power) {
+  const alpha = 0.38 + power * 0.42;
+
+  if (prediction.cuePath?.length > 1) {
+    ctx.strokeStyle = `rgba(255, 238, 177, ${alpha})`;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([22, 13]);
+    ctx.beginPath();
+    prediction.cuePath.forEach((point, index) => {
+      if (index === 0) ctx.moveTo(point.x, point.y);
+      else ctx.lineTo(point.x, point.y);
+    });
+    ctx.stroke();
+  }
+
+  if (prediction.objectPath?.length > 1) {
+    ctx.strokeStyle = "rgba(138, 221, 255, 0.62)";
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([12, 12]);
+    ctx.beginPath();
+    ctx.moveTo(prediction.objectPath[0].x, prediction.objectPath[0].y);
+    ctx.lineTo(prediction.objectPath[1].x, prediction.objectPath[1].y);
+    ctx.stroke();
+  }
+
+  if (prediction.ghostBall) {
+    ctx.setLineDash([]);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.34)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(prediction.ghostBall.x, prediction.ghostBall.y, TABLE.ballRadius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function drawSpinBadge(ctx, cue, spin) {
+  if (!spin || (Math.abs(spin.x) < 0.02 && Math.abs(spin.y) < 0.02)) return;
+
+  const x = cue.position.x + spin.x * 10;
+  const y = cue.position.y - spin.y * 10;
+  ctx.fillStyle = "rgba(33, 45, 41, 0.72)";
+  ctx.beginPath();
+  ctx.arc(cue.position.x, cue.position.y, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffdf8a";
+  ctx.beginPath();
+  ctx.arc(x, y, 3.2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawBallShadow(ctx, ball, radius) {
+  const speed = Math.hypot(ball.velocity.x, ball.velocity.y);
+  const offset = Math.min(8, 3 + speed / 240);
+
+  ctx.save();
+  ctx.translate(ball.position.x + offset, ball.position.y + offset * 0.72);
+  ctx.scale(1.18, 0.72);
+  const shadow = ctx.createRadialGradient(0, 0, 1, 0, 0, radius + 8);
+  shadow.addColorStop(0, "rgba(0, 0, 0, 0.32)");
+  shadow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = shadow;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius + 9, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 
@@ -164,12 +424,13 @@ function drawBall(ctx, ball, radius) {
   ctx.translate(x, y);
   ctx.rotate(rotation);
 
-  const shadow = ctx.createRadialGradient(-4, -5, 2, 0, 0, radius + 6);
-  shadow.addColorStop(0, "rgba(255, 255, 255, 0.86)");
-  shadow.addColorStop(0.32, data.color);
-  shadow.addColorStop(1, "#070807");
+  const shadow = ctx.createRadialGradient(-6, -8, 2, 2, 5, radius + 8);
+  shadow.addColorStop(0, "rgba(255, 255, 255, 0.94)");
+  shadow.addColorStop(0.24, data.type === "cue" ? "#fffdf0" : data.color);
+  shadow.addColorStop(0.72, data.color);
+  shadow.addColorStop(1, "#050605");
 
-  ctx.fillStyle = data.type === "cue" ? "#f8f6e8" : shadow;
+  ctx.fillStyle = data.type === "cue" ? shadow : shadow;
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
   ctx.fill();
@@ -183,6 +444,12 @@ function drawBall(ctx, ball, radius) {
     ctx.fillRect(-radius, -7, radius * 2, 14);
     ctx.restore();
   }
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius - 0.8, 0, Math.PI * 2);
+  ctx.stroke();
 
   if (data.type !== "cue") {
     ctx.fillStyle = "#f6f0dc";
