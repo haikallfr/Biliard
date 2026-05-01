@@ -1,31 +1,41 @@
-# BreakRoom 8 Ball
+# BreakRoom 8
 
-Game biliar 8-ball berbasis web dengan React, Matter.js, dan canvas. Proyek ini bisa langsung di-deploy ke Vercel.
+BreakRoom 8 adalah game 8-ball pool HTML5 yang bisa dimainkan lokal, di HP lewat jaringan Wi-Fi yang sama, dan siap deploy ke Vercel. Game utama memakai build HTML5 dari 8Ball-Pool-HTML5 dengan wrapper UI modern dan layer online room.
 
-## Jalankan lokal
+## Jalankan Lokal
 
 ```bash
 npm install
 npm run dev
 ```
 
+Buka:
+
+- Laptop: `http://localhost:5173/`
+- HP satu Wi-Fi: `http://192.168.100.159:5173/`
+
 ## Multiplayer
 
-Game tetap bisa dimainkan tanpa konfigurasi backend. Dalam mode itu, multiplayer memakai `BroadcastChannel`, cocok untuk simulasi antar tab di browser yang sama.
+Ada dua mode transport:
 
-Untuk multiplayer online antar perangkat, buat project Supabase lalu isi environment variables berikut di `.env.local` dan di Vercel:
+- Supabase Realtime: untuk multiplayer online beda device dan beda jaringan.
+- BroadcastChannel fallback: hanya untuk test antar tab browser ketika Supabase belum dikonfigurasi.
+
+Buat file `.env.local` untuk test lokal atau isi Environment Variables di Vercel:
 
 ```bash
-VITE_SUPABASE_URL=...
-VITE_SUPABASE_ANON_KEY=...
+VITE_SUPABASE_URL=https://PROJECT_ID.supabase.co
+VITE_SUPABASE_ANON_KEY=YOUR_PUBLIC_ANON_OR_PUBLISHABLE_KEY
 ```
 
-Supabase Realtime broadcast dipakai sebagai transport room. Di Vercel, set variables yang sama di Project Settings, lalu deploy.
+Setelah env terisi, jalankan ulang build/dev server. Klik `Host`, bagikan kode atau link room, lalu lawan klik `Join`.
 
 ## Deploy Vercel
+
+Import repository ini ke Vercel. `vercel.json` akan menjalankan:
 
 ```bash
 npm run build
 ```
 
-Import repository ini ke Vercel. Vercel akan membaca `vercel.json` dan menjalankan build Vite secara otomatis.
+Build menghasilkan folder `dist/` berisi static site. Multiplayer lintas device tetap memakai Supabase Realtime dari browser, jadi tidak perlu server WebSocket custom di Vercel.

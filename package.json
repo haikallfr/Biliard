@@ -1,23 +1,14 @@
 {
-  "name": "vercel-8-ball-pool",
+  "name": "breakroom-8-html5",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
+    "dev": "node scripts/write-runtime-config.mjs && vite --host 0.0.0.0",
+    "build": "node scripts/write-runtime-config.mjs && rm -rf dist && mkdir -p dist && cp -R index.html site.css online-multiplayer.js runtime-config.js assets html5games crazygames-sdk-v2.js sdk_interface.js famobi.json README.md MULTIPLAYER.md THIRD_PARTY_NOTICES.md dist/",
     "preview": "vite preview --host 0.0.0.0"
   },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.43.4",
-    "lucide-react": "^0.468.0",
-    "matter-js": "^0.20.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.1",
-    "playwright": "^1.59.1",
-    "vite": "^5.4.2"
+    "vite": "^5.4.21"
   }
 }
